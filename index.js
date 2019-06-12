@@ -45,6 +45,16 @@ server.post('/api/login', async (req, res) => {
   }
 })
 
+server.get('/api/users', jwtAuth, async (req, res) => {
+  try {
+    const dbData = await db.select().from('users');
+    console.log(req.userId);
+    res.json({ users: dbData });
+  } catch(err) {
+    res.status(500).json({ error: err });
+  }
+})
+
 function generateToken(user) {
   const payload = {
     subject: user.id,
@@ -56,6 +66,26 @@ function generateToken(user) {
   };
 
   return jwt.sign(payload, secrets.jwtSecret, options);
+}
+
+function jwtAuth(req, res, next) {
+  const token = req.headers.authorization;
+
+  if (token) {
+    console.log(token);
+    jwt.verify(token, secrets.jwtSecret, (err, payload) => {
+      if (err) {
+        console.log(err);
+        res.status(403).json({ message: 'You are not authorized.'})
+      } else {
+        console.log(payload);
+        req.userId = payload.userId;
+        next();
+      }
+    });
+  } else {
+    res.status(400).json({ message: 'No credentials provided.' });
+  }
 }
 
 const port = 4040;
